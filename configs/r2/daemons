@@ -1,0 +1,11 @@
+zebra=yes
+bgpd=yes
+staticd=yes
+
+# The important part for this lab is "-M snmp".
+# It loads FRR's SNMP module, allowing the 'agentx' command to work.
+zebra_options=" -A 127.0.0.1 -M snmp"
+bgpd_options=" -A 127.0.0.1 -M snmp"
+staticd_options=" -A 127.0.0.1"
+
+vtysh_enable=yes

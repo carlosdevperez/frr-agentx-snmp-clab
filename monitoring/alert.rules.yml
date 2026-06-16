@@ -1,0 +1,11 @@
+groups:
+  - name: frr-bgp
+    rules:
+      - alert: FrrBgpPeerDown
+        expr: bgpPeerState != 6
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: FRR BGP peer is not established
+          description: '{{ $labels.instance }} peer {{ $labels.bgpPeerRemoteAddr }} is in BGP4-MIB state {{ $value }}; expected 6.'
