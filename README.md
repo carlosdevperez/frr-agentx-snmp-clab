@@ -6,6 +6,8 @@ The lab builds local Docker images and starts two FRR routers, two attached Linu
 
 ## Topology
 
+![FRR AgentX/SNMP lab topology](docs/topology.svg)
+
 ```text
 h1 192.168.1.10/24 -- 192.168.1.1/24 r1
 r1 eth1 10.0.12.1/30  ----  10.0.12.2/30 eth1 r2
@@ -71,6 +73,7 @@ images/frr-snmp/start.sh
 images/frr-snmp/snmpd.conf
 images/snmp-client/Dockerfile
 images/host/Dockerfile
+docs/topology.svg
 Taskfile.yml
 frr-agentx-bgp.clab.yml
 monitoring/blackbox.yml

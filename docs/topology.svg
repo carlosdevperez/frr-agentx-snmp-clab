@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">FRR AgentX SNMP lab topology</title>
+  <desc id="desc">Containerlab topology with two FRR routers, two Linux hosts, Prometheus, SNMP exporter, and SNMP client connected through the management network.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .mgmt { fill: #eef4ff; stroke: #84adff; stroke-width: 1.5; stroke-dasharray: 8 6; }
+      .node { fill: #ffffff; stroke: #344054; stroke-width: 2; }
+      .router { fill: #fff7ed; stroke: #f97316; }
+      .host { fill: #ecfdf3; stroke: #16a34a; }
+      .service { fill: #eff6ff; stroke: #2563eb; }
+      .tool { fill: #f4f3ff; stroke: #7c3aed; }
+      .link { stroke: #111827; stroke-width: 4; fill: none; }
+      .mgmt-link { stroke: #667085; stroke-width: 2; fill: none; stroke-dasharray: 5 5; }
+      .title { font-family: Arial, sans-serif; font-size: 28px; font-weight: 700; fill: #101828; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 14px; fill: #475467; }
+      .section { font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #344054; }
+      .node-title { font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #101828; text-anchor: middle; }
+      .node-role { font-family: Arial, sans-serif; font-size: 12px; fill: #475467; text-anchor: middle; }
+      .node-line { font-family: Arial, sans-serif; font-size: 12px; fill: #344054; text-anchor: middle; }
+      .link-label { font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #344054; text-anchor: middle; }
+      .iface { font-family: Arial, sans-serif; font-size: 12px; fill: #475467; text-anchor: middle; }
+      .note { font-family: Arial, sans-serif; font-size: 12px; fill: #475467; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="620"/>
+
+  <text class="title" x="48" y="52">FRR AgentX/SNMP lab topology</text>
+  <text class="subtitle" x="48" y="76">Routed two-router lab with attached hosts and lab-internal monitoring services</text>
+
+  <rect class="mgmt" x="48" y="105" width="1104" height="155" rx="10"/>
+  <text class="section" x="70" y="134">Containerlab management network</text>
+  <text class="note" x="70" y="157">Dynamic management addresses. Nodes are reachable by DNS names inside the lab.</text>
+
+  <g id="prometheus">
+    <rect class="node service" x="110" y="180" width="190" height="56" rx="8"/>
+    <text class="node-title" x="205" y="204">prometheus</text>
+    <text class="node-role" x="205" y="222">TCP/9090 on host</text>
+  </g>
+
+  <g id="snmp-exporter">
+    <rect class="node service" x="505" y="180" width="190" height="56" rx="8"/>
+    <text class="node-title" x="600" y="204">snmp-exporter</text>
+    <text class="node-role" x="600" y="222">TCP/9116</text>
+  </g>
+
+  <g id="snmp-client">
+    <rect class="node tool" x="900" y="180" width="190" height="56" rx="8"/>
+    <text class="node-title" x="995" y="204">snmp-client</text>
+    <text class="node-role" x="995" y="222">debug toolbox</text>
+  </g>
+
+  <line class="mgmt-link" x1="205" y1="236" x2="205" y2="315"/>
+  <line class="mgmt-link" x1="600" y1="236" x2="600" y2="315"/>
+  <line class="mgmt-link" x1="995" y1="236" x2="995" y2="315"/>
+  <line class="mgmt-link" x1="70" y1="315" x2="1130" y2="315"/>
+
+  <text class="section" x="48" y="348">Data plane</text>
+
+  <g id="h1">
+    <rect class="node host" x="75" y="410" width="185" height="92" rx="8"/>
+    <text class="node-title" x="167.5" y="438">h1</text>
+    <text class="node-role" x="167.5" y="456">Linux host</text>
+    <text class="node-line" x="167.5" y="478">eth1 192.168.1.10/24</text>
+  </g>
+
+  <g id="r1">
+    <rect class="node router" x="365" y="385" width="195" height="142" rx="8"/>
+    <text class="node-title" x="462.5" y="416">r1</text>
+    <text class="node-role" x="462.5" y="434">FRR, AS 65001</text>
+    <text class="node-line" x="462.5" y="458">router-id 1.1.1.1</text>
+    <text class="node-line" x="462.5" y="480">eth1 10.0.12.1/30</text>
+    <text class="node-line" x="462.5" y="502">eth2 192.168.1.1/24</text>
+  </g>
+
+  <g id="r2">
+    <rect class="node router" x="640" y="385" width="195" height="142" rx="8"/>
+    <text class="node-title" x="737.5" y="416">r2</text>
+    <text class="node-role" x="737.5" y="434">FRR, AS 65002</text>
+    <text class="node-line" x="737.5" y="458">router-id 2.2.2.2</text>
+    <text class="node-line" x="737.5" y="480">eth1 10.0.12.2/30</text>
+    <text class="node-line" x="737.5" y="502">eth2 192.168.2.1/24</text>
+  </g>
+
+  <g id="h2">
+    <rect class="node host" x="940" y="410" width="185" height="92" rx="8"/>
+    <text class="node-title" x="1032.5" y="438">h2</text>
+    <text class="node-role" x="1032.5" y="456">Linux host</text>
+    <text class="node-line" x="1032.5" y="478">eth1 192.168.2.10/24</text>
+  </g>
+
+  <line class="link" x1="260" y1="456" x2="365" y2="456"/>
+  <text class="link-label" x="312" y="431">192.168.1.0/24</text>
+  <text class="iface" x="312" y="476">h1:eth1 - r1:eth2</text>
+
+  <line class="link" x1="560" y1="456" x2="640" y2="456"/>
+  <text class="link-label" x="600" y="431">10.0.12.0/30</text>
+  <text class="iface" x="600" y="476">r1:eth1 - r2:eth1</text>
+  <text class="iface" x="600" y="494">eBGP</text>
+
+  <line class="link" x1="835" y1="456" x2="940" y2="456"/>
+  <text class="link-label" x="887" y="431">192.168.2.0/24</text>
+  <text class="iface" x="887" y="476">r2:eth2 - h2:eth1</text>
+
+  <rect class="node" x="260" y="548" width="680" height="44" rx="8"/>
+  <text class="node-line" x="600" y="574">BGP advertises host LANs: r1 -> 192.168.1.0/24, r2 -> 192.168.2.0/24</text>
+
+  <text class="note" x="48" y="608">Monitoring services are shown only as management-network nodes; protocol details are documented in README.md and Prometheus config.</text>
+</svg>
