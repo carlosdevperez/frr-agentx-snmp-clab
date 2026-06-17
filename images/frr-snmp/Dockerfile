@@ -16,8 +16,8 @@ RUN apt-get update \
         less \
     && rm -rf /var/lib/apt/lists/*
 
-COPY snmpd.conf /etc/snmp/snmpd.conf
-COPY start.sh /usr/local/bin/start.sh
+COPY images/frr-snmp/snmpd.conf /etc/snmp/snmpd.conf
+COPY images/frr-snmp/start.sh /usr/local/bin/start.sh
 
 RUN chmod +x /usr/local/bin/start.sh \
     && mkdir -p /etc/frr /run/frr /var/log/frr /var/agentx \

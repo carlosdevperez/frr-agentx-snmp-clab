@@ -52,10 +52,10 @@ snmpd
 ## Files
 
 ```text
-Dockerfile
-Dockerfile.snmp-client
-start.sh
-snmpd.conf
+images/frr-snmp/Dockerfile
+images/frr-snmp/start.sh
+images/frr-snmp/snmpd.conf
+images/snmp-client/Dockerfile
 frr-agentx-bgp.clab.yml
 monitoring/snmp.yml
 monitoring/prometheus.yml
@@ -71,8 +71,8 @@ configs/r2/daemons
 Run this from this directory:
 
 ```bash
-docker build -t frr-snmp-agentx:latest .
-docker build -f Dockerfile.snmp-client -t frr-snmp-client:latest .
+docker build -f images/frr-snmp/Dockerfile -t frr-snmp-agentx:latest .
+docker build -f images/snmp-client/Dockerfile -t frr-snmp-client:latest .
 ```
 
 ## Deploy the topology
