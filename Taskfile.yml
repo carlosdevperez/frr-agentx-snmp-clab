@@ -5,6 +5,7 @@ vars:
   LAB: clab-frr-agentx-bgp
   FRR_IMAGE: frr-snmp-agentx:latest
   CLIENT_IMAGE: frr-snmp-client:latest
+  HOST_IMAGE: frr-host:latest
   PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.12.0
   SNMP_EXPORTER_IMAGE: quay.io/prometheus/snmp-exporter:v0.30.1
 
@@ -19,6 +20,7 @@ tasks:
     deps:
       - build:frr
       - build:client
+      - build:host
 
   build:frr:
     internal: true
@@ -31,6 +33,12 @@ tasks:
     desc: Build the lab SNMP client image
     cmds:
       - docker build -f images/snmp-client/Dockerfile -t {{.CLIENT_IMAGE}} .
+
+  build:host:
+    internal: true
+    desc: Build the lab host image
+    cmds:
+      - docker build -f images/host/Dockerfile -t {{.HOST_IMAGE}} .
 
   deploy:
     desc: Deploy the Containerlab topology
@@ -58,11 +66,12 @@ tasks:
       - clab inspect interfaces -t {{.TOPOLOGY}}
 
   verify:
-    desc: Run config, BGP, SNMP, exporter, and Prometheus checks
+    desc: Run config, BGP, SNMP, traffic, exporter, and Prometheus checks
     cmds:
       - task: verify:config
       - task: verify:bgp
       - task: verify:snmp
+      - task: verify:traffic
       - task: verify:exporter
       - task: verify:prometheus
 
@@ -94,12 +103,25 @@ tasks:
       - docker exec {{.LAB}}-snmp-client curl -fsS "http://snmp-exporter:9116/snmp?auth=public_v2&module=bgp4&target=r1" | grep '^bgpPeerState'
       - docker exec {{.LAB}}-snmp-client curl -fsS "http://snmp-exporter:9116/snmp?auth=public_v2&module=bgp4&target=r2" | grep '^bgpPeerState'
 
+  verify:traffic:
+    internal: true
+    desc: Verify host-to-host routed traffic
+    cmds:
+      - docker exec {{.LAB}}-h1 ping -c 3 192.168.2.10
+      - docker exec {{.LAB}}-h1 curl -fsS http://192.168.2.10:8000 >/dev/null
+      - docker exec {{.LAB}}-snmp-client curl -fsS "http://h1:9115/probe?module=http_2xx&target=http://192.168.2.10:8000" | grep '^probe_success 1'
+
   verify:prometheus:
     internal: true
     desc: Query Prometheus for BGP peer state series
     cmds:
       - |
-        docker exec {{.LAB}}-snmp-client bash -lc 'curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode "query=bgpPeerState" | jq -r '"'"'.status, (.data.result[] | [.metric.instance, .metric.bgpPeerRemoteAddr, .value[1]] | @tsv)'"'"''
+        docker exec {{.LAB}}-snmp-client bash -lc 'curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode "query=bgpPeerState" | jq -r '"'"'.status, (.data.result[] | [.metric.instance, .metric.bgpPeerRemoteAddr, .value[1]] | @tsv)'"'"'; curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode "query=probe_success{job=\"host_reachability\"}" | jq -r '"'"'(.data.result[] | [.metric.instance, .value[1]] | @tsv)'"'"''
+
+  traffic:
+    desc: Test host-to-host traffic
+    cmds:
+      - task: verify:traffic
 
   break-link:
     desc: Bring down r1 eth1 to trigger the BGP-down alert
@@ -112,7 +134,7 @@ tasks:
       - docker exec {{.LAB}}-r1 ip link set eth1 up
 
   alerts:
-    desc: Query firing FrrBgpPeerDown alerts
+    desc: Query firing lab alerts
     cmds:
       - |
-        docker exec {{.LAB}}-snmp-client bash -lc 'curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode '"'"'query=ALERTS{alertname="FrrBgpPeerDown",alertstate="firing"}'"'"' | jq -r '"'"'.data.result[] | [.metric.instance, .metric.bgpPeerRemoteAddr, .value[1]] | @tsv'"'"''
+        docker exec {{.LAB}}-snmp-client bash -lc 'curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode '"'"'query=ALERTS{alertstate="firing"}'"'"' | jq -r '"'"'.data.result[] | [.metric.alertname, .metric.instance, (.metric.bgpPeerRemoteAddr // .metric.target // "-"), .value[1]] | @tsv'"'"''

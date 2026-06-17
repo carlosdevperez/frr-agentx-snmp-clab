@@ -36,3 +36,26 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: snmp-exporter:9116
+
+  - job_name: host_reachability
+    metrics_path: /probe
+    params:
+      module:
+        - http_2xx
+    static_configs:
+      - targets:
+          - http://192.168.2.10:8000
+        labels:
+          path: h1_to_h2
+    relabel_configs:
+      - source_labels:
+          - __address__
+        target_label: __param_target
+      - source_labels:
+          - path
+        target_label: instance
+      - source_labels:
+          - __param_target
+        target_label: target
+      - target_label: __address__
+        replacement: h1:9115

@@ -9,3 +9,19 @@ groups:
         annotations:
           summary: FRR BGP peer is not established
           description: '{{ $labels.instance }} peer {{ $labels.bgpPeerRemoteAddr }} is in BGP4-MIB state {{ $value }}; expected 6.'
+      - alert: HostPathDown
+        expr: probe_success{job="host_reachability"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: Routed host path is down
+          description: 'Probe {{ $labels.instance }} to {{ $labels.target }} is failing.'
+      - alert: HostProbeExporterDown
+        expr: up{job="host_reachability"} == 0
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: Host reachability probe exporter is down
+          description: 'Prometheus cannot scrape the host reachability probe exporter at {{ $labels.instance }}.'
