@@ -12,25 +12,30 @@ r1 eth1 10.0.12.1/30  ----  10.0.12.2/30 eth1 r2
 r1:
   AS 65001
   router-id 1.1.1.1
-  management IPv4 172.20.20.11
+  management address assigned dynamically by Containerlab
+  reachable inside the lab as r1
   SNMP exposed inside the lab on UDP/161
 
 r2:
   AS 65002
   router-id 2.2.2.2
-  management IPv4 172.20.20.12
+  management address assigned dynamically by Containerlab
+  reachable inside the lab as r2
   SNMP exposed inside the lab on UDP/161
 
 snmp-exporter:
-  management IPv4 172.20.20.20
+  management address assigned dynamically by Containerlab
+  reachable inside the lab as snmp-exporter
   Prometheus SNMP exporter exposed inside the lab on TCP/9116
 
 prometheus:
-  management IPv4 172.20.20.21
+  management address assigned dynamically by Containerlab
+  reachable inside the lab as prometheus
   Prometheus exposed on host TCP/9090
 
 snmp-client:
-  management IPv4 172.20.20.30
+  management address assigned dynamically by Containerlab
+  reachable inside the lab as snmp-client
   lab-internal toolbox for snmpwalk, curl, jq, ping, and tcpdump
 ```
 
@@ -38,6 +43,7 @@ Inside each container:
 
 ```text
 snmpd
+  ├── UDP/161 on IPv4 and IPv6 management addresses
   └── AgentX socket /var/agentx/master
         ├── zebra -M snmp
         └── bgpd  -M snmp
@@ -133,14 +139,14 @@ r1:
 
 ```bash
 docker exec -it clab-frr-agentx-bgp-snmp-client \
-  snmpwalk -v2c -c public -On udp:172.20.20.11:161 1.3.6.1.2.1.15
+  snmpwalk -v2c -c public -On udp:r1:161 1.3.6.1.2.1.15
 ```
 
 r2:
 
 ```bash
 docker exec -it clab-frr-agentx-bgp-snmp-client \
-  snmpwalk -v2c -c public -On udp:172.20.20.12:161 1.3.6.1.2.1.15
+  snmpwalk -v2c -c public -On udp:r2:161 1.3.6.1.2.1.15
 ```
 
 Useful values to look for:
@@ -171,7 +177,7 @@ Query r1 directly through the exporter:
 
 ```bash
 docker exec -it clab-frr-agentx-bgp-snmp-client \
-  curl -s 'http://172.20.20.20:9116/snmp?auth=public_v2&module=bgp4&target=172.20.20.11' | grep '^bgpPeerState'
+  curl -s 'http://snmp-exporter:9116/snmp?auth=public_v2&module=bgp4&target=r1' | grep '^bgpPeerState'
 ```
 
 Expected when BGP is established:
@@ -225,3 +231,5 @@ sudo clab destroy -t frr-agentx-bgp.clab.yml --cleanup
 ## Notes
 
 This is a lab-only setup. It uses SNMPv2c with community `public` and wide-open access inside the lab network. For production, use SNMPv3 and restrict access with firewalling, management VRF, ACLs, or equivalent controls.
+
+Containerlab/Docker DNS can return IPv6 addresses before IPv4 addresses. The router containers therefore bind `snmpd` on both IPv4 and IPv6 UDP/161, allowing Prometheus `snmp_exporter` to scrape stable node names such as `r1` and `r2` without static management IPv4 assignments.

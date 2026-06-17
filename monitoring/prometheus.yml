@@ -14,7 +14,7 @@ scrape_configs:
   - job_name: snmp_exporter
     static_configs:
       - targets:
-          - 172.20.20.20:9116
+          - snmp-exporter:9116
 
   - job_name: frr_bgp_snmp
     metrics_path: /snmp
@@ -25,8 +25,8 @@ scrape_configs:
         - bgp4
     static_configs:
       - targets:
-          - 172.20.20.11
-          - 172.20.20.12
+          - r1
+          - r2
     relabel_configs:
       - source_labels:
           - __address__
@@ -35,4 +35,4 @@ scrape_configs:
           - __param_target
         target_label: instance
       - target_label: __address__
-        replacement: 172.20.20.20:9116
+        replacement: snmp-exporter:9116

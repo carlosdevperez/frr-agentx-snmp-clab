@@ -5,7 +5,6 @@ topology:
     r1:
       kind: linux
       image: frr-snmp-agentx:latest
-      mgmt-ipv4: 172.20.20.11
       binds:
         - ./configs/r1/frr.conf:/etc/frr/frr.conf:ro
         - ./configs/r1/daemons:/etc/frr/daemons:ro
@@ -16,7 +15,6 @@ topology:
     r2:
       kind: linux
       image: frr-snmp-agentx:latest
-      mgmt-ipv4: 172.20.20.12
       binds:
         - ./configs/r2/frr.conf:/etc/frr/frr.conf:ro
         - ./configs/r2/daemons:/etc/frr/daemons:ro
@@ -27,7 +25,6 @@ topology:
     snmp-exporter:
       kind: linux
       image: quay.io/prometheus/snmp-exporter:v0.30.1
-      mgmt-ipv4: 172.20.20.20
       binds:
         - ./monitoring/snmp.yml:/etc/snmp_exporter/snmp.yml:ro
       cmd: --config.file=/etc/snmp_exporter/snmp.yml
@@ -35,7 +32,6 @@ topology:
     prometheus:
       kind: linux
       image: quay.io/prometheus/prometheus:v3.12.0
-      mgmt-ipv4: 172.20.20.21
       binds:
         - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
         - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
@@ -46,7 +42,6 @@ topology:
     snmp-client:
       kind: linux
       image: frr-snmp-client:latest
-      mgmt-ipv4: 172.20.20.30
 
   links:
     - endpoints: ["r1:eth1", "r2:eth1"]
