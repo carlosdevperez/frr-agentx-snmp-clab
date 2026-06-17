@@ -56,6 +56,7 @@ images/frr-snmp/Dockerfile
 images/frr-snmp/start.sh
 images/frr-snmp/snmpd.conf
 images/snmp-client/Dockerfile
+Taskfile.yml
 frr-agentx-bgp.clab.yml
 monitoring/snmp.yml
 monitoring/prometheus.yml
@@ -75,16 +76,29 @@ docker build -f images/frr-snmp/Dockerfile -t frr-snmp-agentx:latest .
 docker build -f images/snmp-client/Dockerfile -t frr-snmp-client:latest .
 ```
 
+Or with Task:
+
+```bash
+task build
+```
+
 ## Deploy the topology
 
 ```bash
-sudo clab deploy -t frr-agentx-bgp.clab.yml
+clab deploy -t frr-agentx-bgp.clab.yml
+```
+
+Or with Task:
+
+```bash
+task deploy
 ```
 
 ## Verify the nodes
 
 ```bash
-docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}'
+clab inspect -t frr-agentx-bgp.clab.yml
+clab inspect interfaces -t frr-agentx-bgp.clab.yml
 ```
 
 Expected containers:
@@ -95,6 +109,13 @@ clab-frr-agentx-bgp-r2
 clab-frr-agentx-bgp-snmp-exporter
 clab-frr-agentx-bgp-prometheus
 clab-frr-agentx-bgp-snmp-client
+```
+
+Or with Task:
+
+```bash
+task inspect
+task inspect:interfaces
 ```
 
 ## Verify FRR daemons loaded the SNMP module
@@ -202,6 +223,12 @@ curl -sG 'http://127.0.0.1:9090/api/v1/query' --data-urlencode 'query=bgpPeerSta
 
 Both routers should export one `bgpPeerState` series, and an established peer has value `6`.
 
+To run the config, BGP, SNMP, exporter, and Prometheus checks together:
+
+```bash
+task verify
+```
+
 ## Verify the BGP-down alert
 
 Break the r1-r2 link:
@@ -222,10 +249,24 @@ Restore the link:
 docker exec clab-frr-agentx-bgp-r1 ip link set eth1 up
 ```
 
+Or with Task:
+
+```bash
+task break-link
+task alerts
+task restore-link
+```
+
 ## Destroy the lab
 
 ```bash
-sudo clab destroy -t frr-agentx-bgp.clab.yml --cleanup
+clab destroy -t frr-agentx-bgp.clab.yml --cleanup
+```
+
+Or with Task:
+
+```bash
+task destroy
 ```
 
 ## Notes

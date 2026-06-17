@@ -1,0 +1,118 @@
+version: '3'
+
+vars:
+  TOPOLOGY: frr-agentx-bgp.clab.yml
+  LAB: clab-frr-agentx-bgp
+  FRR_IMAGE: frr-snmp-agentx:latest
+  CLIENT_IMAGE: frr-snmp-client:latest
+  PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.12.0
+  SNMP_EXPORTER_IMAGE: quay.io/prometheus/snmp-exporter:v0.30.1
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build all local Docker images
+    deps:
+      - build:frr
+      - build:client
+
+  build:frr:
+    internal: true
+    desc: Build the FRR AgentX/SNMP image
+    cmds:
+      - docker build -f images/frr-snmp/Dockerfile -t {{.FRR_IMAGE}} .
+
+  build:client:
+    internal: true
+    desc: Build the lab SNMP client image
+    cmds:
+      - docker build -f images/snmp-client/Dockerfile -t {{.CLIENT_IMAGE}} .
+
+  deploy:
+    desc: Deploy the Containerlab topology
+    cmds:
+      - clab deploy -t {{.TOPOLOGY}}
+
+  destroy:
+    desc: Destroy the Containerlab topology and generated artifacts
+    cmds:
+      - clab destroy -t {{.TOPOLOGY}} --cleanup
+
+  redeploy:
+    desc: Redeploy the Containerlab topology
+    cmds:
+      - clab redeploy -t {{.TOPOLOGY}} --cleanup
+
+  inspect:
+    desc: Inspect lab nodes
+    cmds:
+      - clab inspect -t {{.TOPOLOGY}}
+
+  inspect:interfaces:
+    desc: Inspect lab interfaces
+    cmds:
+      - clab inspect interfaces -t {{.TOPOLOGY}}
+
+  verify:
+    desc: Run config, BGP, SNMP, exporter, and Prometheus checks
+    cmds:
+      - task: verify:config
+      - task: verify:bgp
+      - task: verify:snmp
+      - task: verify:exporter
+      - task: verify:prometheus
+
+  verify:config:
+    internal: true
+    desc: Validate Prometheus and snmp_exporter configs
+    cmds:
+      - docker run --rm -v "$PWD/monitoring:/etc/prometheus:ro" --entrypoint promtool {{.PROMETHEUS_IMAGE}} check config /etc/prometheus/prometheus.yml
+      - docker run --rm -v "$PWD/monitoring/snmp.yml:/etc/snmp_exporter/snmp.yml:ro" {{.SNMP_EXPORTER_IMAGE}} --config.file=/etc/snmp_exporter/snmp.yml --dry-run
+
+  verify:bgp:
+    internal: true
+    desc: Show BGP summaries on both routers
+    cmds:
+      - docker exec {{.LAB}}-r1 vtysh -c "show bgp summary"
+      - docker exec {{.LAB}}-r2 vtysh -c "show bgp summary"
+
+  verify:snmp:
+    internal: true
+    desc: Walk BGP4-MIB local AS values from both routers by DNS name
+    cmds:
+      - docker exec {{.LAB}}-snmp-client snmpwalk -v2c -c public -On udp:r1:161 1.3.6.1.2.1.15.2.0
+      - docker exec {{.LAB}}-snmp-client snmpwalk -v2c -c public -On udp:r2:161 1.3.6.1.2.1.15.2.0
+
+  verify:exporter:
+    internal: true
+    desc: Scrape both routers through snmp_exporter by DNS name
+    cmds:
+      - docker exec {{.LAB}}-snmp-client curl -fsS "http://snmp-exporter:9116/snmp?auth=public_v2&module=bgp4&target=r1" | grep '^bgpPeerState'
+      - docker exec {{.LAB}}-snmp-client curl -fsS "http://snmp-exporter:9116/snmp?auth=public_v2&module=bgp4&target=r2" | grep '^bgpPeerState'
+
+  verify:prometheus:
+    internal: true
+    desc: Query Prometheus for BGP peer state series
+    cmds:
+      - |
+        docker exec {{.LAB}}-snmp-client bash -lc 'curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode "query=bgpPeerState" | jq -r '"'"'.status, (.data.result[] | [.metric.instance, .metric.bgpPeerRemoteAddr, .value[1]] | @tsv)'"'"''
+
+  break-link:
+    desc: Bring down r1 eth1 to trigger the BGP-down alert
+    cmds:
+      - docker exec {{.LAB}}-r1 ip link set eth1 down
+
+  restore-link:
+    desc: Bring r1 eth1 back up
+    cmds:
+      - docker exec {{.LAB}}-r1 ip link set eth1 up
+
+  alerts:
+    desc: Query firing FrrBgpPeerDown alerts
+    cmds:
+      - |
+        docker exec {{.LAB}}-snmp-client bash -lc 'curl -fsS -G "http://prometheus:9090/api/v1/query" --data-urlencode '"'"'query=ALERTS{alertname="FrrBgpPeerDown",alertstate="firing"}'"'"' | jq -r '"'"'.data.result[] | [.metric.instance, .metric.bgpPeerRemoteAddr, .value[1]] | @tsv'"'"''
