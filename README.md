@@ -2,7 +2,7 @@
 
 This is a self-contained lab for testing FRR SNMP exposure through Net-SNMP AgentX.
 
-The lab builds one local Docker image and starts two FRR routers with Containerlab.
+The lab builds local Docker images and starts two FRR routers, a lab-internal SNMP client, Prometheus `snmp_exporter`, and Prometheus with Containerlab.
 
 ## Topology
 
@@ -13,21 +13,25 @@ r1:
   AS 65001
   router-id 1.1.1.1
   management IPv4 172.20.20.11
-  SNMP exposed on host UDP/1161
+  SNMP exposed inside the lab on UDP/161
 
 r2:
   AS 65002
   router-id 2.2.2.2
   management IPv4 172.20.20.12
-  SNMP exposed on host UDP/1162
+  SNMP exposed inside the lab on UDP/161
 
 snmp-exporter:
   management IPv4 172.20.20.20
-  Prometheus SNMP exporter exposed on host TCP/9116
+  Prometheus SNMP exporter exposed inside the lab on TCP/9116
 
 prometheus:
   management IPv4 172.20.20.21
   Prometheus exposed on host TCP/9090
+
+snmp-client:
+  management IPv4 172.20.20.30
+  lab-internal toolbox for snmpwalk, curl, jq, ping, and tcpdump
 ```
 
 Inside each container:
@@ -43,6 +47,7 @@ snmpd
 
 ```text
 Dockerfile
+Dockerfile.snmp-client
 start.sh
 snmpd.conf
 frr-agentx-bgp.clab.yml
@@ -55,12 +60,13 @@ configs/r2/frr.conf
 configs/r2/daemons
 ```
 
-## Build the image
+## Build the images
 
 Run this from this directory:
 
 ```bash
 docker build -t frr-snmp-agentx:latest .
+docker build -f Dockerfile.snmp-client -t frr-snmp-client:latest .
 ```
 
 ## Deploy the topology
@@ -82,6 +88,7 @@ clab-frr-agentx-bgp-r1
 clab-frr-agentx-bgp-r2
 clab-frr-agentx-bgp-snmp-exporter
 clab-frr-agentx-bgp-prometheus
+clab-frr-agentx-bgp-snmp-client
 ```
 
 ## Verify FRR daemons loaded the SNMP module
@@ -125,13 +132,15 @@ The eBGP session should eventually become Established.
 r1:
 
 ```bash
-snmpwalk -v2c -c public -On udp:127.0.0.1:1161 1.3.6.1.2.1.15
+docker exec -it clab-frr-agentx-bgp-snmp-client \
+  snmpwalk -v2c -c public -On udp:172.20.20.11:161 1.3.6.1.2.1.15
 ```
 
 r2:
 
 ```bash
-snmpwalk -v2c -c public -On udp:127.0.0.1:1162 1.3.6.1.2.1.15
+docker exec -it clab-frr-agentx-bgp-snmp-client \
+  snmpwalk -v2c -c public -On udp:172.20.20.12:161 1.3.6.1.2.1.15
 ```
 
 Useful values to look for:
@@ -161,7 +170,8 @@ The SNMP exporter is configured with a small `bgp4` module in `monitoring/snmp.y
 Query r1 directly through the exporter:
 
 ```bash
-curl -s 'http://127.0.0.1:9116/snmp?auth=public_v2&module=bgp4&target=172.20.20.11' | grep '^bgpPeerState'
+docker exec -it clab-frr-agentx-bgp-snmp-client \
+  curl -s 'http://172.20.20.20:9116/snmp?auth=public_v2&module=bgp4&target=172.20.20.11' | grep '^bgpPeerState'
 ```
 
 Expected when BGP is established:
@@ -214,4 +224,4 @@ sudo clab destroy -t frr-agentx-bgp.clab.yml --cleanup
 
 ## Notes
 
-This is a lab-only setup. It uses SNMPv2c with community `public` and wide-open access. For production, use SNMPv3 and restrict access with firewalling, management VRF, ACLs, or equivalent controls.
+This is a lab-only setup. It uses SNMPv2c with community `public` and wide-open access inside the lab network. For production, use SNMPv3 and restrict access with firewalling, management VRF, ACLs, or equivalent controls.

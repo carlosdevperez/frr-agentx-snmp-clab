@@ -9,8 +9,6 @@ topology:
       binds:
         - ./configs/r1/frr.conf:/etc/frr/frr.conf:ro
         - ./configs/r1/daemons:/etc/frr/daemons:ro
-      ports:
-        - 1161:161/udp
       exec:
         - ip link set eth1 up
         - ip addr add 10.0.12.1/30 dev eth1
@@ -22,8 +20,6 @@ topology:
       binds:
         - ./configs/r2/frr.conf:/etc/frr/frr.conf:ro
         - ./configs/r2/daemons:/etc/frr/daemons:ro
-      ports:
-        - 1162:161/udp
       exec:
         - ip link set eth1 up
         - ip addr add 10.0.12.2/30 dev eth1
@@ -34,8 +30,6 @@ topology:
       mgmt-ipv4: 172.20.20.20
       binds:
         - ./monitoring/snmp.yml:/etc/snmp_exporter/snmp.yml:ro
-      ports:
-        - 9116:9116
       cmd: --config.file=/etc/snmp_exporter/snmp.yml
 
     prometheus:
@@ -48,6 +42,11 @@ topology:
       ports:
         - 9090:9090
       cmd: --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --web.console.libraries=/usr/share/prometheus/console_libraries --web.console.templates=/usr/share/prometheus/consoles --web.enable-lifecycle
+
+    snmp-client:
+      kind: linux
+      image: frr-snmp-client:latest
+      mgmt-ipv4: 172.20.20.30
 
   links:
     - endpoints: ["r1:eth1", "r2:eth1"]
